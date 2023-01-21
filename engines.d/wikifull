@@ -1,0 +1,2 @@
+url='https://en.wikipedia.org/w/index.php?title=Special:Search&profile=advanced&fulltext=1&search='
+terms="${terms// /+}"

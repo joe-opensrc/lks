@@ -1,0 +1,13 @@
+url='https://www.google.co.uk/search?num=30&q='
+
+if [[ ${all} -eq 0 ]]
+then
+  for t in ${terms[@]}
+  do
+    nterms+="\"${t}\" "
+  done
+ terms=${nterms% }
+ nterms=""
+fi
+
+terms="${terms// /+}"

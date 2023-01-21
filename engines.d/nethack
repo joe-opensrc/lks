@@ -1,0 +1,2 @@
+url='https://nethackwiki.com/mediawiki/index.php?title=Special%3ASearch&fulltext=Search&search='
+terms="${terms// /+}"
