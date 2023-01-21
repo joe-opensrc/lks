@@ -1,0 +1,32 @@
+#Usage: lks [-b <w3m|links2|elinks>] [-e <wiki|wikifull|nethack|google|imdb|duck|pbay|urban|wikt|guten|scala|rarbg>] term1 [ term2 ...]
+
+EDIR=~/bin/lks/engines.d
+
+function _lks() {
+
+  local cur prev words cword
+  _init_completion || return 
+
+  case "${prev}" in
+    -b)
+      browsers="w3m links2 elinks wget" 
+
+      COMPREPLY+=( $( compgen -W "${browsers}" -- "${cur}" ) )
+      return 0;;
+
+    -e)
+      #hardcoded defaults everywhere :O
+      es="$( ls -1 ${EDIR} 2>/dev/null )"
+      es="${es:-google}"
+      COMPREPLY+=( $( compgen -W "${es}" -- "${cur}" ) )
+      return 0;;
+  esac
+
+  COMPREPLY=( $( compgen -W "-b -e" -- "${cur}" ) )
+
+
+} &&
+{ complete -F _lks lks; \
+  complete -F _lks lk;
+}
+
