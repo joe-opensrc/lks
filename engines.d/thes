@@ -1,0 +1,4 @@
+url='https://www.thesaurus.com/browse'
+term=${terms[0]}
+url="https://www.thesaurus.com/browse/${term}?s=t"
+terms=""
