@@ -1,0 +1,129 @@
+#!/bin/bash 
+
+# Uses bash 'source' to implement engine specific settings / logic
+# these are found in the 'engines.d' folder
+# In the original version engines were simply a 'case' statement
+# This is a workaround so the script can be open-sourced and keep some settings private
+# TODO: provide user with flag to set 'engines.d' dir.
+
+ROOT="$( realpath $( dirname ${0} ) )"
+EDIR="${ROOT}/engines.d"
+
+usg="
+  Usage: lks [-U] [-b <w3m|links2|elinks>] [-e <engine>] term1 [ term2 ...]
+
+    -U  :=  URL-mode; don't search, pass <terms> to the browser unmodified.
+    -a  :=  wrap search terms with double-quotes '\"'; (used by google engine).
+    -b  :=  specify which browser to use.
+    -e  :=  specify which search engine to use.
+    -h  :=  this help message ;)
+    -n  :=  dry-run; echo out the generated command.
+    -p  :=  pass through options; pass flags to browser
+    -o  :=  specify PROXY settings
+
+"
+
+if [[ $# -eq 0 || ( $# -eq 1 && "${1}" == "--help" ) ]]
+then
+  echo -ne "${usg}"
+  exit 0
+fi
+
+OPTIND=
+OPTARG=
+all=1
+psthru=""
+browser=$( /usr/bin/printenv CONSOLE_BROWSER )
+browser=${browser:-w3m}
+engine="google"
+proxy=
+dryrun=""
+urlmode=1
+terms=
+torify=1
+
+while getopts 'TUab:e:hnop:' opt
+do
+  case "${opt}" in
+    T) torify=0;;
+    U) urlmode=0;;
+    a) all=0;;
+    b) browser=${OPTARG};;
+    e) engine="${OPTARG}";;
+    h) echo -ne "${usg}"; exit 0;;
+    n) dryrun="echo";;
+    p) psthru="${OPTARG}";;
+    o) proxy="/usr/bin/env HTTP_PROXY=http://${PROXY_IP}:3128 HTTPS_PROXY=https://${PROXY_IP}:3128";;
+   \?) echo -ne "${usg}"; exit 1;;
+  esac
+
+  shift $(( OPTIND - 1 ))
+  OPTIND=
+
+done
+
+# choose a browser; defaults to: w3m
+case "${browser}" in
+
+  l|links2) browser="/usr/bin/links2 -html-numbered-links 1";
+            if [[ -n "${proxy}" ]]
+            then
+              browser="${browser} -http-proxy ${PROXY_IP}:3128 -https-proxy ${PROXY_IP}:3128"
+            fi;;
+
+  w|w3m)    browser="/usr/bin/w3m -o display_link_number=1";
+            if [[ $# -eq 0 ]]
+            then
+              browser="${browser} -B"
+            fi;;
+
+  e|elinks) browser="/usr/bin/elinks";;
+
+  g|wget)   browser="/usr/bin/wget -q -O -";;
+
+  # should be toryfied prefix? 
+  t|tor)  browser="start-tor-browser";;
+
+  *) echo -ne "\nBrowser ${browser}, Not Found!\n\n";;
+
+esac
+
+if [[ ${torify} -eq 0 ]]
+then
+  # tor &
+  # sleep 5
+  # tor_pid=${!}
+  browser="torify ${browser}"
+fi
+
+# if we're in browsing mode
+if [[ ${urlmode} -eq 0 ]]
+then
+
+  url="${@}"
+  
+else
+
+  # search terms are the remaining arguments
+  terms="${@}"
+  # default is: google
+  efile="${EDIR}/${engine}"
+
+  # source file to override engine specific variables
+  # i.e.,  url, browser, terms.
+  if [[ -f "${efile}" && -r "${efile}" ]]
+  then
+   source "${efile}"
+  else
+    echo -ne "\n  Cannot find engine: ${engine}\n  Look in ${EDIR} or perhaps try autocompletion?\n\n"
+    exit 2
+  fi
+
+fi
+
+# execute command
+${dryrun} ${proxy} ${browser} ${psthru} ${url}${terms[@]}
+if [[ ${torify} -eq 0 ]]
+then
+    kill ${tor_pid}
+fi
